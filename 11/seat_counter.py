@@ -9,7 +9,7 @@ def load_seat_map(filename):
             rows.append(list(line.rstrip()))
     return rows
 
-def get_points_to_check(seat_map, row, col):
+def get_neighbours(seat_map, row, col):
     num_rows = len(seat_map)
     num_cols = len(seat_map[0])
     points = ((row - 1, col - 1), (row - 1, col    ), (row - 1, col + 1),
@@ -18,15 +18,44 @@ def get_points_to_check(seat_map, row, col):
     return tuple(filter(lambda x: x[0] >= 0 and x[0] < num_rows and
                                   x[1] >= 0 and x[1] < num_cols, points))
 
-def count_occupied_neighbours(seat_map, row, col):
+def get_visible_seat(seat_map, row, col, direction):
+    num_rows = len(seat_map)
+    num_cols = len(seat_map[0])
+    while True:
+        row += direction[0]
+        col += direction[1]
+        if row < 0 or col < 0 or row >= num_rows or col >= num_cols:
+            return None
+        if seat_map[row][col] == "#" or seat_map[row][col] == "L":
+            return row, col
+
+def get_visible_seats(seat_map, row, col):
+    visible_seats = []
+    dirs = ((-1, -1), (-1, +0), (-1, +1),
+            (+0, -1),           (+0, +1),
+            (+1, -1), (+1, +0), (+1, +1))
+    for direction in dirs:
+        coords_to_check = get_visible_seat(seat_map, row, col, direction)
+        if coords_to_check:
+            visible_seats.append(coords_to_check)
+    return visible_seats
+
+def count_occupied(seat_map, points):
     count = 0
-    points = get_points_to_check(seat_map, row, col)
     for point in points:
         row = point[0]
         col = point[1]
         if seat_map[row][col] == "#":
             count += 1
     return count
+
+def count_occupied_neighbours(seat_map, row, col):
+    points = get_neighbors(seat_map, row, col)
+    return count_occupied(seat_map, points)
+
+def count_occupied_visible(seat_map, row, col):
+    points = get_visible_seats(seat_map, row, col)
+    return count_occupied(seat_map, points)
 
 def count_occupied_total(seat_map):
     count = 0
@@ -44,11 +73,11 @@ def seating_step(old_state):
     for r in range(num_rows):
         new_row = []
         for c in range(num_cols):
-            count = count_occupied_neighbours(old_state, r, c)
+            count = count_occupied_visible(old_state, r, c)
             if old_state[r][c] == "L" and count == 0:
                     change_count += 1
                     new_row.append("#")
-            elif old_state[r][c] == "#" and count >= 4:
+            elif old_state[r][c] == "#" and count >= 5:
                     change_count += 1
                     new_row.append("L")
             else:
